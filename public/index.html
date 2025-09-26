@@ -34,8 +34,8 @@
       li.innerHTML = `
         <span style="text-decoration:${todo.completed ? 'line-through' : 'none'}">${todo.text}</span>
         <div>
-          <button class="btn btn-sm btn-success me-2" onclick="toggle(${todo.id})">✓</button>
-          <button class="btn btn-sm btn-danger" onclick="remove(${todo.id})">✕</button>
+          <button class="btn btn-sm btn-success me-2" onclick="toggle('${todo._id}')">✓</button>
+          <button class="btn btn-sm btn-danger" onclick="remove('${todo._id}')">✕</button>
         </div>
       `;
       todoList.appendChild(li);
@@ -53,13 +53,13 @@
     fetchTodos();
   });
 
-  window.toggle = async id => {
-    await fetch(`/todos/${id}`, { method: "PATCH" });
+  window.toggle = async _id => {
+    await fetch(`/todos/${_id}`, { method: "put" });
     fetchTodos();
   };
 
-  window.remove = async id => {
-    await fetch(`/todos/${id}`, { method: "DELETE" });
+  window.remove = async _id => {
+    await fetch(`/todos/${_id}`, { method: "DELETE" });
     fetchTodos();
   };
 

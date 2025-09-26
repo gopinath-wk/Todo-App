@@ -1,80 +1,46 @@
 import { Request, Response } from "express";
-import { Todo } from "../models/Todo";
+import Todo from "../models/Todo.js";
 
-import fs from "fs";
-import path from "path";
-// Path to JSON file
-const dataPath = path.resolve("data/todo.json");
 
-// Helper to read todos
-const readTodos = (): Todo[] => {
-  try {
-    const raw = fs.readFileSync(dataPath, "utf-8");
-    return JSON.parse(raw) as Todo[];
-  } catch (error) {
-    console.error("Error reading todos:", error);
-    return [];
-  }
-};
 
-// Helper to write todos
-const writeTodos = (todos: Todo[]): void => {
-  try {
-    fs.writeFileSync(dataPath, JSON.stringify(todos, null, 2));
-  } catch (error) {
-    console.error("Error writing todos:", error);
-    throw new Error("Failed to save todos");
-  }
-};
 
-// Get all todos
-export const getTodos = (req: Request, res: Response) => {
-  try {
-    const todos = readTodos();
+export const getTodos = async (req:Request,res:Response)=>{
+  try{
+    const todos= await Todo.find();
     res.json(todos);
-  } catch (error) {
-    console.error("Error getting todos:", error);
+  }catch(err){
+  console.error(err);
     res.status(500).json({ message: "Internal server error" });
   }
-};
+}
 
-// Add a new todo
-export const addTodo = (req: Request, res: Response) => {
-  try {
-    const { text } = req.body;
+export const addTodo = async(req: Request, res: Response) => {
+  try{
+    const {text} = req.body;
     if (!text || text.trim() === "") {
       return res.status(400).json({ message: "Todo text is required" });
     }
-    
-    const todos = readTodos();
-    const newTodo: Todo = {
-      id: Date.now(),
-      text: text.trim(),
-      completed: false
-    };
-    todos.push(newTodo);
-    writeTodos(todos);
-    res.status(201).json(newTodo);
+    const new_todo = new Todo({ text: text.trim() });
+    await new_todo.save();
+
+    res.status(201).json(new_todo);
   } catch (error) {
     console.error("Error adding todo:", error);
     res.status(500).json({ message: "Internal server error" });
   }
 };
 
-// Toggle completed
-export const toggleTodo = (req: Request, res: Response) => {
+
+export const toggleTodo = async(req: Request, res: Response) => {
   try {
-    const id = Number(req.params.id);
-    if (isNaN(id)) {
-      return res.status(400).json({ message: "Invalid todo ID" });
-    }
-    
-    const todos = readTodos();
-    const todo = todos.find(t => t.id === id);
-    if (!todo) return res.status(404).json({ message: "Todo not found" });
-    
-    todo.completed = !todo.completed;
-    writeTodos(todos);
+   const id = req.params.id;
+  if (!id) return res.status(400).json({ message: "Missing id parameter" });
+   const todo = await Todo.findById(id);
+
+   if(!todo) return res.status(404).json({message:"Todo not found"});
+
+   todo.completed = !todo.completed;
+   await todo.save();
     res.json(todo);
   } catch (error) {
     console.error("Error toggling todo:", error);
@@ -82,24 +48,15 @@ export const toggleTodo = (req: Request, res: Response) => {
   }
 };
 
-// Delete todo
-export const deleteTodo = (req: Request, res: Response) => {
+export const deleteTodo = async(req: Request, res: Response) => {
   try {
-    const id = Number(req.params.id);
-    if (isNaN(id)) {
-      return res.status(400).json({ message: "Invalid todo ID" });
-    }
+  const id = req.params.id;
+  if (!id) return res.status(400).json({ message: "Missing id parameter" });
     
-    let todos = readTodos();
-    const initialLength = todos.length;
-    todos = todos.filter(t => t.id !== id);
-    
-    if (todos.length === initialLength) {
-      return res.status(404).json({ message: "Todo not found" });
-    }
-    
-    writeTodos(todos);
-    res.json({ message: "Todo deleted" });
+     const result=await Todo.findByIdAndDelete(id);
+     if (!result) return res.status(404).json({ message: "Todo not found" });
+res.json({ message: "Todo deleted" });
+     
   } catch (error) {
     console.error("Error deleting todo:", error);
     res.status(500).json({ message: "Internal server error" });
