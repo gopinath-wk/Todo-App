@@ -6,7 +6,9 @@ import Todo from "../models/Todo.js";
 
 export const getTodos = async (req:Request,res:Response)=>{
   try{
-    const todos= await Todo.find();
+    const ownerId = (req as any).userId;
+    if (!ownerId) return res.status(401).json({ message: "Unauthorized" });
+    const todos= await Todo.find({ owner: ownerId });
     res.json(todos);
   }catch(err){
   console.error(err);
@@ -20,7 +22,9 @@ export const addTodo = async(req: Request, res: Response) => {
     if (!text || text.trim() === "") {
       return res.status(400).json({ message: "Todo text is required" });
     }
-    const new_todo = new Todo({ text: text.trim() });
+  const ownerId = (req as any).userId;
+  if (!ownerId) return res.status(401).json({ message: "Unauthorized" });
+  const new_todo = new Todo({ text: text.trim(), owner: ownerId });
     await new_todo.save();
 
     res.status(201).json(new_todo);
@@ -33,15 +37,19 @@ export const addTodo = async(req: Request, res: Response) => {
 
 export const toggleTodo = async(req: Request, res: Response) => {
   try {
-   const id = req.params.id;
+  const id = req.params.id;
   if (!id) return res.status(400).json({ message: "Missing id parameter" });
-   const todo = await Todo.findById(id);
+  const ownerId = (req as any).userId;
+  if (!ownerId) return res.status(401).json({ message: "Unauthorized" });
+  const todo = await Todo.findById(id);
 
-   if(!todo) return res.status(404).json({message:"Todo not found"});
+  if(!todo) return res.status(404).json({message:"Todo not found"});
 
-   todo.completed = !todo.completed;
-   await todo.save();
-    res.json(todo);
+  if (todo.owner.toString() !== ownerId) return res.status(403).json({ message: "Forbidden" });
+
+  todo.completed = !todo.completed;
+  await todo.save();
+   res.json(todo);
   } catch (error) {
     console.error("Error toggling todo:", error);
     res.status(500).json({ message: "Internal server error" });
@@ -52,9 +60,13 @@ export const deleteTodo = async(req: Request, res: Response) => {
   try {
   const id = req.params.id;
   if (!id) return res.status(400).json({ message: "Missing id parameter" });
+  const ownerId = (req as any).userId;
+  if (!ownerId) return res.status(401).json({ message: "Unauthorized" });
     
-     const result=await Todo.findByIdAndDelete(id);
-     if (!result) return res.status(404).json({ message: "Todo not found" });
+     const todo = await Todo.findById(id);
+     if (!todo) return res.status(404).json({ message: "Todo not found" });
+     if (todo.owner.toString() !== ownerId) return res.status(403).json({ message: "Forbidden" });
+     await Todo.findByIdAndDelete(id);
 res.json({ message: "Todo deleted" });
      
   } catch (error) {
