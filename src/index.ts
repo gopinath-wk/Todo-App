@@ -1,9 +1,9 @@
+import 'dotenv/config';
 import express from "express";
 import todoRoutes from "./routes/todoRoutes.js";
 import path from "path";
 import mongoose, { mongo } from "mongoose";
-import dotenv from "dotenv";
-dotenv.config();
+import authRoutes from "./routes/authRoutes.js";
 
 const mongoURI = process.env.MONGO_URI as string;
 
@@ -12,7 +12,7 @@ const PORT = 3000;
 
 app.use(express.json());
 app.use(express.static(path.resolve("public")));
-
+app.use("/auth",authRoutes);
 app.use("/todos", todoRoutes);
 
 mongoose.connect(mongoURI)
