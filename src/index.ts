@@ -8,22 +8,34 @@ import authRoutes from "./routes/authRoutes.js";
 const mongoURI = process.env.MONGO_URI as string;
 
 const app = express();
-const PORT = 3000;
-
 app.use(express.json());
-app.use(express.static(path.resolve("public")));
-app.use("/auth",authRoutes);
+
+
+app.use(express.static(path.join(process.cwd(), "public")));
+
+
+app.use("/auth", authRoutes);
 app.use("/todos", todoRoutes);
 
-mongoose.connect(mongoURI)
-.then(()=>{
-  console.log("Connected to Mongodb ");
-  app.listen(PORT, () => {
-  console.log(`Server running at http://localhost:${PORT}`);
+app.get("/api/health", (req, res) => {
+  res.json({ status: "ok" });
 });
+
+
+if (process.env.NODE_ENV!=='test') {
+  mongoose
+    .connect(mongoURI)
+    .then(() => {
+      console.log("Connected to MongoDB");
+      const PORT = process.env.PORT || 3000;
+      app.listen(PORT, () => {
+        console.log(`Server running on http://localhost:${PORT}`);
+      });
+    })
+    .catch((err) => {
+      console.error(" Failed to connect to MongoDB", err);
+    });
 }
-).catch((err)=>{
-  console.error("Failed to connect to Mongodb",err);
-})
 
-
+export { app };
+export default app;
